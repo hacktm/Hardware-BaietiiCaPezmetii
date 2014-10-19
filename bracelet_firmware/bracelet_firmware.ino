@@ -152,7 +152,7 @@ void loop()
     Serial.print(Roll());
     Serial.println();*/ 
     
-    if (Roll() < -0.3)
+    /*if (Roll() < -0.3)
     {
       Serial.write('4');
     } else if(Roll() > 0.3)
@@ -171,6 +171,35 @@ void loop()
     if (b1Val == 1)
     {
       Serial.write('6');
+    }*/
+    
+    if (Roll() < -0.2 || Roll() > 0.2)
+    {
+      Serial.print("A");
+      Serial.print(Roll()*10);
+      Serial.print(";");
+      Serial.print(Pitch()*10);
+      Serial.print(";0.00!");
+    }
+    
+    if (Pitch() < -0.3 || Pitch() > 0.3)
+    {
+      Serial.print("A");
+      Serial.print(Roll()*10);
+      Serial.print(";");
+      Serial.print(Pitch()*10);
+      Serial.print(";0.00!");
+    }
+    else
+    {
+      Serial.print("A0.00;");
+      Serial.print(Roll());
+      Serial.print(";0.00!");
+    }
+    
+    if (b1Val == 1)
+    {
+      Serial.print("A0.00;0.00;0.00!");
     }
     
     delay(100);   
@@ -179,6 +208,11 @@ void loop()
 double Roll()
 {
   return atan2(-xAccel,zAccel);
+}
+
+double Pitch()
+{
+  return atan2(yAccel, sqrt(xAccel*xAccel + zAccel*zAccel));
 }
 
 //

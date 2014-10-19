@@ -17,9 +17,23 @@ const int MOTOR1_PIN2 = 9;
 
 char recvCmd;
 
+#define  btBufferLength 32
+char btBuffer[btBufferLength];
+//uint8_t  btBuffer[btBufferLength];
+uint8_t  btBufferCount;
+char     btByte;
+char     delimiter = 59; //';'
+char     ack = 33; // '!'
+int      waitTime;
+
+float data[3];
+int   intdata[3];
+
 const int xbeeRxPin = 4;
 const int xbeeTxPin = 2;
 SoftwareSerial xbeeRemote(xbeeRxPin, xbeeTxPin);
+
+
 
 void setup()
 {
@@ -35,14 +49,15 @@ void setup()
 	pinMode(MOTOR1_PIN2, OUTPUT);
 
         xbeeRemote.begin(9600);
+        waitTime = 10;
 }
 
 void loop()
 {
-        receiveBufferXbee();
+        receiveBuffer();
 }
 
-void receiveBufferXbee()
+/*void receiveBufferXbee()
 {
   while (xbeeRemote.available() > 0) {
     recvCmd = xbeeRemote.read();
@@ -68,6 +83,107 @@ void receiveBufferXbee()
     else if (recvCmd == '5')
       Neutral();
   }
+}*/
+
+bool receiveBuffer()
+{
+	uint8_t lastByte;
+	boolean timeout = false;
+	while (!timeout) {
+		while (xbeeRemote.available() > 0) {
+			lastByte = xbeeRemote.read();
+      
+			if (lastByte == ack) {
+				Move();
+				clearBuffer(btBuffer, btBufferCount, btBufferLength);
+			} else if (btBufferCount < btBufferLength) {
+				btBuffer[btBufferCount] = lastByte;
+				btBufferCount++;
+			} else {
+				return false;
+			}
+		}
+    
+		/*if (xbeeRemote.available() <= 0 && !timeout) {
+			if (waitTime > 0) delayMicroseconds(waitTime);
+			if (xbeeRemote.available() <= 0) timeout = true;
+		}*/
+	}
+	return timeout;
+}
+
+
+void getFloatVal(float values[], char m_buffer[], uint8_t m_bufferCount)
+{
+  int t = 0;
+  int pos = 0;
+  
+  int start = 1;
+  for (int endpos = 1; endpos<m_bufferCount; endpos++) {
+    if (btBuffer[endpos] == delimiter) {
+      char b[(endpos-start)+1];
+      t=0;
+      for (int i = start; i<endpos; i++) {
+        b[t++] = (char)btBuffer[i];
+      }
+      b[t] = '\0';
+      values[pos++] = atof(b);
+      start = endpos+1;
+    }
+  }
+  char b[(m_bufferCount-start)+1];
+  t=0;
+  for (int i = start; i<m_bufferCount; i++) {
+    b[t++] = (char)btBuffer[i];
+  }
+  b[t] = '\0';
+  values[pos] = atof(b);
+}
+
+void clearBuffer(char m_buffer[], uint8_t m_bufferCount, int m_bufferLength)
+{
+	for (uint8_t i=0; i < m_bufferLength; i++)
+	{
+	  btBuffer[i] = 0;
+	}
+	//m_buffer[0] = 0; //clear the buffer
+	//m_bufferCount = 0;
+	btBufferCount = 0;
+}
+
+void Move()
+{
+	getFloatVal(data, btBuffer, btBufferCount);
+
+
+	Serial.print("data0: ");
+	Serial.println(data[0]);
+	Serial.print("data1: ");
+	Serial.println(data[1]);
+
+  
+	int throtle = int(data[1]);
+	int steering = int(data[0]);
+  
+	if (throtle > 1 && throtle < 10)
+        {
+		//GoForward(throtle*28);
+                GoBackward(abs(throtle)*(28));
+        }
+	else if (throtle < 0 && throtle > -10)
+        {
+		//GoBackward(throtle*(-28));
+                GoForward(abs(throtle)*28);
+        }
+	else if (throtle == 0)
+		Stop();
+    
+	if (steering == 0)
+		Neutral();
+	else if (steering < -1)
+		TurnLeft();
+	else if (steering > 1)
+		TurnRight();
 }
 
 void GoForward(int speed)
